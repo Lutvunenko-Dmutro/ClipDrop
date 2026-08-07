@@ -47,7 +47,8 @@ async def download_and_process_youtube_video(url: str) -> tuple[str, bool]:
         'outtmpl': original_path_tpl,
         'quiet': True,
         'merge_output_format': 'mp4',
-        'noplaylist': True
+        'noplaylist': True,
+        'extractor_args': {'youtube': ['player_client=android']}
     }
 
     loop = asyncio.get_running_loop()
