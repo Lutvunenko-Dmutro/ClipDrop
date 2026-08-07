@@ -19,7 +19,7 @@ async def resolve_tiktok_redirect(url: str) -> str:
 @router.message(CommandStart())
 async def start_handler(message: Message):
     text = (
-        "Привіт! 👋 Я універсальний медіа-бот.\n\n"
+        "Привіт! 👋 Я **ClipDrop** — твій універсальний медіа-бот.\n\n"
         "Надішли мені посилання на відео з **YouTube** або **TikTok**, "
         "і я завантажу його для тебе!"
     )
@@ -27,7 +27,7 @@ async def start_handler(message: Message):
 
 @router.message(Command("version"))
 async def version_handler(message: Message):
-    await message.reply("Версія бота: 2.0.0 (Unified Universal Media Bot)")
+    await message.reply("Версія бота: 2.0.0 (ClipDrop)")
 
 @router.message(F.text)
 async def message_handler(message: Message):

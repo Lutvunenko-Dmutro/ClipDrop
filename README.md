@@ -1,4 +1,4 @@
-# Universal Telegram Media Downloader
+# ClipDrop — Universal Telegram Media Downloader
 
 Потужний і сучасний Telegram-бот для завантаження відео з **YouTube** та **TikTok**. 
 Написаний на базі `aiogram 3.x` з використанням `yt-dlp` та `ffmpeg`.
