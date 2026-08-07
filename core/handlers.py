@@ -5,7 +5,7 @@ from aiogram.types import Message
 from aiogram.filters import CommandStart, Command
 from aiogram.types import FSInputFile
 
-from core.downloader import download_tiktok_video, download_and_process_youtube_video, cleanup_file
+from core.downloader import download_tiktok_video, download_youtube_rapidapi, cleanup_file
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ async def message_handler(message: Message):
             cleanup_file(video_path)
             
         elif is_youtube:
-            video_path, was_compressed = await download_and_process_youtube_video(url)
+            video_path, was_compressed = await download_youtube_rapidapi(url, wait_msg)
             
             if was_compressed:
                 await wait_msg.edit_text("⏳ Відео завелике, стискаю його щоб відправити в Telegram (це може зайняти хвилину)...")

@@ -4,6 +4,9 @@ import logging
 import yt_dlp
 import uuid
 import subprocess
+import re
+import aiohttp
+from aiogram import types
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +35,104 @@ async def download_tiktok_video(url: str) -> str:
             return ydl.prepare_filename(info)
             
     return await loop.run_in_executor(None, _download)
+
+async def download_youtube_rapidapi(url: str, message: types.Message) -> tuple[str, bool]:
+    """
+    Завантажує YouTube відео через RapidAPI з відображенням прогресу.
+    Повертає (шлях_до_файлу, чи_було_стиснення).
+    """
+    RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
+    RAPIDAPI_HOST = "youtube-video-fast-downloader-24-7.p.rapidapi.com"
+    
+    if not RAPIDAPI_KEY:
+        logger.warning("RAPIDAPI_KEY не знайдено, використовуємо yt-dlp як запасний варіант.")
+        return await download_and_process_youtube_video(url)
+
+    logger.info(f"RapidAPI: Завантажуємо {url}")
+    
+    # Витягуємо ID відео
+    match = re.search(r"(?:v=|\/|youtu\.be\/)([0-9A-Za-z_-]{11})(?:\?|&|\/|$)", url)
+    if not match:
+        logger.error("Не вдалося знайти ID відео")
+        raise ValueError("Неправильне посилання на YouTube")
+    video_id = match.group(1)
+    
+    api_url = f"https://{RAPIDAPI_HOST}/download_video/{video_id}"
+    headers = {
+        "X-RapidAPI-Key": RAPIDAPI_KEY,
+        "X-RapidAPI-Host": RAPIDAPI_HOST,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    
+    try:
+        # Даємо API 60 секунд на відповідь, бо воно іноді довго думає
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=60)) as session:
+            try:
+                await message.edit_text("⏳ Зв'язуємось з сервером RapidAPI...")
+            except:
+                pass
+                
+            async with session.get(api_url, headers=headers) as resp:
+                if resp.status != 200:
+                    text = await resp.text()
+                    logger.error(f"RapidAPI помилка: {resp.status} - {text}")
+                    # Фоллбек на yt-dlp
+                    return await download_and_process_youtube_video(url)
+                data = await resp.json()
+                
+            file_url = data.get("file") or data.get("reserved_file")
+            if not file_url:
+                logger.error("API не повернуло посилання на файл")
+                return await download_and_process_youtube_video(url)
+                
+            # Чекаємо поки відео буде готове
+            wait_time = 0
+            while wait_time < 300:
+                async with session.head(file_url, headers={"User-Agent": headers["User-Agent"]}, allow_redirects=True) as head_resp:
+                    if head_resp.status == 200:
+                        break # Готово!
+                    elif head_resp.status in (404, 403):
+                        await asyncio.sleep(5)
+                        wait_time += 5
+                        if wait_time % 10 == 0:
+                            try:
+                                await message.edit_text(f"⏳ Сервер RapidAPI готує відео...\nОчікуємо (минуло {wait_time} сек)")
+                            except Exception:
+                                pass # Ігноруємо помилки, якщо текст не змінився
+                    else:
+                        logger.warning(f"Неочікувана відповідь при перевірці файлу: {head_resp.status}")
+                        break
+                        
+            if wait_time >= 300:
+                logger.error("Перевищено час очікування готовності відео")
+                return await download_and_process_youtube_video(url)
+                
+            try:
+                await message.edit_text("⏳ Відео готове! Завантажуємо у Telegram...")
+            except:
+                pass
+                
+            file_id_uuid = str(uuid.uuid4())
+            output_path = os.path.join(VIDEOS_DIR, f"{file_id_uuid}.mp4")
+            
+            async with session.get(file_url, headers={"User-Agent": headers["User-Agent"]}) as dl_resp:
+                if dl_resp.status == 200:
+                    with open(output_path, 'wb') as f:
+                        while True:
+                            chunk = await dl_resp.content.read(8192)
+                            if not chunk:
+                                break
+                            f.write(chunk)
+                else:
+                    logger.error(f"Помилка при завантаженні файлу: {dl_resp.status}")
+                    return await download_and_process_youtube_video(url)
+                    
+            return output_path, False
+            
+    except Exception as e:
+        logger.error(f"Помилка RapidAPI: {e}")
+        # Якщо все падає, фоллбек на старий надійний(або не дуже) yt-dlp
+        return await download_and_process_youtube_video(url)
 
 async def download_and_process_youtube_video(url: str) -> tuple[str, bool]:
     """
