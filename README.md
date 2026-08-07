@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/avatar.png" width="150" alt="ClipDrop Bot Avatar"/>
+</p>
+
 # 🎬 ClipDrop — Universal Telegram Media Downloader
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
