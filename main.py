@@ -42,13 +42,9 @@ async def on_startup(bot: Bot):
     webhook_full_url = f"{WEBHOOK_URL}{WEBHOOK_PATH}"
     await bot.set_webhook(
         url=webhook_full_url,
-        drop_pending_updates=True   # Ігнорувати старі повідомлення при старті
+        drop_pending_updates=True
     )
     logger.info(f"✅ Webhook встановлено: {webhook_full_url}")
-
-async def on_shutdown(bot: Bot):
-    logger.info("🔻 Видаляємо webhook...")
-    await bot.delete_webhook()
 
 # ============================================================
 #  Точка входу
@@ -62,9 +58,9 @@ def main():
     dp  = Dispatcher()
     dp.include_router(router)
 
-    # Реєструємо хуки старту / зупинки
+    # Реєструємо тільки старт (не видаляємо webhook при зупинці — він залишається
+    # активним, а наступний старт просто оновить його адресу через on_startup)
     dp.startup.register(on_startup)
-    dp.shutdown.register(on_shutdown)
 
     # Створюємо aiohttp додаток
     app = web.Application()
@@ -72,7 +68,7 @@ def main():
     # Маршрут для health check
     app.router.add_get("/", health_check)
 
-    # Aiogram обробляє POST /webhook — всі оновлення від Telegram йдуть сюди
+    # Aiogram обробляє POST /webhook
     SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
