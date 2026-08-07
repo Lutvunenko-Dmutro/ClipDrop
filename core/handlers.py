@@ -6,6 +6,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import FSInputFile
 
 from core.downloader import download_tiktok_video, download_youtube_rapidapi, cleanup_file
+from core.limiter import check_limits, record_request
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -32,14 +33,22 @@ async def version_handler(message: Message):
 @router.message(F.text)
 async def message_handler(message: Message):
     url = message.text.strip()
+    user_id = message.from_user.id
     
-    # Перевірка на TikTok
+    # Перевірка на TikTok / YouTube
     is_tiktok = "tiktok.com" in url.lower()
     is_youtube = "youtube.com" in url.lower() or "youtu.be" in url.lower()
 
     if not is_tiktok and not is_youtube:
         await message.reply("Будь ласка, надішліть дійсне посилання на YouTube або TikTok.")
         return
+
+    # ── Перевірка лімітів (Anti-flood + Daily limit) ──────────────────
+    allowed, reason = check_limits(user_id)
+    if not allowed:
+        await message.reply(reason, parse_mode="Markdown")
+        return
+    # ──────────────────────────────────────────────────────────────────
 
     wait_msg = await message.reply("⏳ Обробляю посилання, зачекайте...")
 
@@ -73,6 +82,9 @@ async def message_handler(message: Message):
                 await message.reply_video(video)
                 
             cleanup_file(video_path)
+
+        # Фіксуємо успішний запит (лічильник + часова мітка для anti-flood)
+        record_request(user_id)
 
         # Видаляємо повідомлення "Обробляю..."
         await wait_msg.delete()
