@@ -1,8 +1,8 @@
 import os
-import asyncio
 import logging
 from aiohttp import web
 from aiogram import Bot, Dispatcher
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from dotenv import load_dotenv
 from core.handlers import router
 
@@ -16,41 +16,68 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- ВЕБ-СЕРВЕР ОБМАНКА ДЛЯ RENDER ---
-async def handle_health_check(request):
-    return web.Response(text="Bot is running! (ClipDrop Health Check OK)")
+# ============================================================
+#  Конфігурація
+# ============================================================
+TOKEN        = os.getenv("TOKEN")
+WEBHOOK_URL  = os.getenv("WEBHOOK_URL", "").rstrip("/")
+WEBHOOK_PATH = "/webhook"
+PORT         = int(os.environ.get("PORT", 8080))
 
-async def start_web_server():
-    app = web.Application()
-    app.router.add_get('/', handle_health_check)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    
-    # Render передає порт через змінну PORT. Якщо її немає (локально), юзаємо 8080
-    port = int(os.environ.get('PORT', 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    logger.info(f"Dummy веб-сервер запущено на порту {port}")
+# ============================================================
+#  Хендлери веб-сервера
+# ============================================================
+async def health_check(request):
+    """Для Render health check та браузерної перевірки."""
+    return web.Response(text="✅ ClipDrop Bot is running!")
 
-# --- ОСНОВНИЙ ЗАПУСК БОТА ---
-async def main():
-    token = os.getenv("TOKEN")
-    if not token:
-        logger.error("Не задано токен! Створіть файл .env та додайте TOKEN=ваш_токен")
+# ============================================================
+#  Старт і зупинка
+# ============================================================
+async def on_startup(bot: Bot):
+    if not WEBHOOK_URL:
+        logger.error("WEBHOOK_URL не задано! Встановіть змінну оточення.")
         return
 
-    bot = Bot(token=token)
-    dp = Dispatcher()
+    webhook_full_url = f"{WEBHOOK_URL}{WEBHOOK_PATH}"
+    await bot.set_webhook(
+        url=webhook_full_url,
+        drop_pending_updates=True   # Ігнорувати старі повідомлення при старті
+    )
+    logger.info(f"✅ Webhook встановлено: {webhook_full_url}")
+
+async def on_shutdown(bot: Bot):
+    logger.info("🔻 Видаляємо webhook...")
+    await bot.delete_webhook()
+
+# ============================================================
+#  Точка входу
+# ============================================================
+def main():
+    if not TOKEN:
+        logger.error("Не задано TOKEN! Перевірте .env файл.")
+        return
+
+    bot = Bot(token=TOKEN)
+    dp  = Dispatcher()
     dp.include_router(router)
 
-    # Запускаємо веб-сервер у фоні
-    asyncio.create_task(start_web_server())
+    # Реєструємо хуки старту / зупинки
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
 
-    logger.info("Запуск Медіа Бота (ClipDrop)...")
-    await dp.start_polling(bot)
+    # Створюємо aiohttp додаток
+    app = web.Application()
+
+    # Маршрут для health check
+    app.router.add_get("/", health_check)
+
+    # Aiogram обробляє POST /webhook — всі оновлення від Telegram йдуть сюди
+    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
+    setup_application(app, dp, bot=bot)
+
+    logger.info(f"🚀 Запуск ClipDrop Webhook сервера на порту {PORT}...")
+    web.run_app(app, host="0.0.0.0", port=PORT)
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logger.info("Бот зупинено.")
+    main()
