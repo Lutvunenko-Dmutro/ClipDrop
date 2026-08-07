@@ -62,6 +62,8 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if "youtube.com" in url or "youtu.be" in url:
         try:
             logger.info(f"Починаємо завантаження відео з URL: {url}")
+            # Create videos folder if it doesn't exist
+            os.makedirs('videos', exist_ok=True)
             ydl_opts = {
                 'format': 'bestvideo+bestaudio/best',  # Завантажити найкраще доступне відео та аудіо
                 'outtmpl': 'videos/original_video.%(ext)s',
@@ -69,7 +71,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = await asyncio.get_event_loop().run_in_executor(None, ydl.extract_info, url)
+                info_dict = await asyncio.get_running_loop().run_in_executor(None, ydl.extract_info, url)
                 video_extension = info_dict['ext']
                 original_video_path = f'videos/original_video.{video_extension}'
             logger.info("Завершено завантаження відео")
@@ -107,7 +109,7 @@ async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 # Асинхронна функція для зменшення розміру відео
 async def resize_video(input_path, output_path):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, actual_resize_video, input_path, output_path)
 
 # Синхронна функція для зменшення розміру відео
