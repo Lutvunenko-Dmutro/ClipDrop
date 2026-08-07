@@ -19,10 +19,11 @@ logger = logging.getLogger(__name__)
 # ============================================================
 #  Конфігурація
 # ============================================================
-TOKEN        = os.getenv("TOKEN")
-WEBHOOK_URL  = os.getenv("WEBHOOK_URL", "").rstrip("/")
-WEBHOOK_PATH = "/webhook"
-PORT         = int(os.environ.get("PORT", 8080))
+TOKEN          = os.getenv("TOKEN")
+WEBHOOK_URL    = os.getenv("WEBHOOK_URL", "").rstrip("/")
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
+WEBHOOK_PATH   = "/webhook"
+PORT           = int(os.environ.get("PORT", 8080))
 
 # ============================================================
 #  Хендлери веб-сервера
@@ -42,6 +43,7 @@ async def on_startup(bot: Bot):
     webhook_full_url = f"{WEBHOOK_URL}{WEBHOOK_PATH}"
     await bot.set_webhook(
         url=webhook_full_url,
+        secret_token=WEBHOOK_SECRET if WEBHOOK_SECRET else None,
         drop_pending_updates=True
     )
     logger.info(f"✅ Webhook встановлено: {webhook_full_url}")
@@ -69,7 +71,11 @@ def main():
     app.router.add_get("/", health_check)
 
     # Aiogram обробляє POST /webhook
-    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path=WEBHOOK_PATH)
+    SimpleRequestHandler(
+        dispatcher=dp, 
+        bot=bot, 
+        secret_token=WEBHOOK_SECRET if WEBHOOK_SECRET else None
+    ).register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
 
     logger.info(f"🚀 Запуск ClipDrop Webhook сервера на порту {PORT}...")
