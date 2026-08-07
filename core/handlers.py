@@ -1,5 +1,6 @@
 import logging
 import aiohttp
+import asyncio
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import CommandStart, Command
@@ -52,6 +53,10 @@ async def message_handler(message: Message):
         return
     # ──────────────────────────────────────────────────────────────────
 
+    # Запускаємо обробку у фоновому завданні, щоб миттєво повернути HTTP 200 для Webhook
+    asyncio.create_task(process_video_task(message, url, is_tiktok, is_youtube, user_id))
+
+async def process_video_task(message: Message, url: str, is_tiktok: bool, is_youtube: bool, user_id: int):
     wait_msg = await message.reply("⏳ Обробляю посилання, зачекайте...")
 
     try:
