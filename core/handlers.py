@@ -40,7 +40,9 @@ async def message_handler(message: Message):
     is_youtube = "youtube.com" in url.lower() or "youtu.be" in url.lower()
 
     if not is_tiktok and not is_youtube:
-        await message.reply("Будь ласка, надішліть дійсне посилання на YouTube або TikTok.")
+        # Відповідаємо тільки в приватних повідомленнях, щоб не спамити в групах
+        if message.chat.type == "private":
+            await message.reply("Будь ласка, надішліть дійсне посилання на YouTube або TikTok.")
         return
 
     # ── Перевірка лімітів (Anti-flood + Daily limit) ──────────────────
