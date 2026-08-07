@@ -13,4 +13,4 @@ WORKDIR /app
 COPY . /app
 
 # Запуск бота
-CMD ["python", "telegram_bot.py"]
+CMD ["python", "main.py"]
