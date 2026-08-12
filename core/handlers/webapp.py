@@ -3,7 +3,8 @@ import json
 from aiogram import Router, F
 from aiogram.types import Message, FSInputFile
 
-from core.bulk_downloader import create_bulk_pack, cleanup_file
+from core.bulk_downloader import create_bulk_pack
+from core.downloader import cleanup_file
 
 router = Router()
 logger = logging.getLogger(__name__)

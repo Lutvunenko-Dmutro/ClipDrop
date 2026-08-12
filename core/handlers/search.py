@@ -3,7 +3,8 @@ from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, URLInputFile, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
 
 from core.pexels_client import search_videos, get_best_video_file, get_lowest_video_file
-from core.bulk_downloader import create_bulk_pack, cleanup_file
+from core.bulk_downloader import create_bulk_pack
+from core.downloader import cleanup_file
 from core.state import get_user_state, update_user_state, add_to_cart, clear_cart
 
 router = Router()
