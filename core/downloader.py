@@ -208,8 +208,39 @@ def cleanup_file(filepath: str):
     except Exception as e:
         logger.error(f"Помилка видалення файлу {filepath}: {e}")
 
+async def compress_video(original_path: str, file_id: str) -> str:
+    """Стискає відео за допомогою ffmpeg, щоб воно влізло в ліміти Telegram (50 МБ)."""
+    resized_path = os.path.join(VIDEOS_DIR, f"{file_id}_resized.mp4")
+    loop = asyncio.get_running_loop()
+    
+    def _compress():
+        command = [
+            'ffmpeg', '-i', original_path,
+            '-vf', 'scale=-2:720',
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '28',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-movflags', '+faststart',
+            '-y', resized_path
+        ]
+        process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if process.returncode != 0:
+            logger.error(f"Помилка ffmpeg: {process.stderr.decode()}")
+            raise RuntimeError("Помилка при стисненні відео")
+        return resized_path
+
+    compressed_path = await loop.run_in_executor(None, _compress)
+    try:
+        os.remove(original_path)
+    except Exception as e:
+        logger.warning(f"Не вдалося видалити оригінал {original_path}: {e}")
+        
+    return compressed_path
+
 async def download_direct_file(url: str, ext: str = "mp4") -> str:
-    """Завантажує файл за прямим посиланням."""
+    """Завантажує файл за прямим посиланням і стискає його, якщо він > 49 MB."""
     file_id = str(uuid.uuid4())
     output_path = os.path.join(VIDEOS_DIR, f"{file_id}.{ext}")
     
@@ -222,6 +253,12 @@ async def download_direct_file(url: str, ext: str = "mp4") -> str:
                         if not chunk:
                             break
                         f.write(chunk)
+                        
+                file_size_mb = os.path.getsize(output_path) / (1024 * 1024)
+                if file_size_mb > 49.5:
+                    logger.info(f"Файл {file_size_mb:.2f} МБ завеликий, починаю стиснення...")
+                    output_path = await compress_video(output_path, file_id)
+                    
                 return output_path
             else:
                 raise RuntimeError(f"Не вдалося завантажити файл: HTTP {resp.status}")
