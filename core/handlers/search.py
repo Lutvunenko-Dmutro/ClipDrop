@@ -1,4 +1,5 @@
 import logging
+import random
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, URLInputFile, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, InputMediaVideo
 
@@ -184,6 +185,8 @@ async def message_handler_search(message: Message):
                 await status_msg.edit_text("❌ Нічого не знайдено.")
                 return
                 
+            random.shuffle(videos)
+            
             update_user_state(user_id, "query", query)
             update_user_state(user_id, "videos", videos)
             update_user_state(user_id, "page", 0)
