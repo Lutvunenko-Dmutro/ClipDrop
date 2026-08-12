@@ -119,19 +119,12 @@
             transform: scale(0.95);
         }
 
-        /* Categories Scroll */
+        /* Categories Container */
         .categories-scroll {
             display: flex;
             gap: 8px;
-            overflow-x: auto;
+            flex-wrap: wrap;
             padding-bottom: 8px;
-            /* Hide scrollbar for a cleaner look */
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        
-        .categories-scroll::-webkit-scrollbar {
-            display: none;
         }
 
         .cat-pill {
