@@ -44,9 +44,11 @@ def get_footage_keyboard(page: int, total: int, hd_url: str, in_cart: bool, cart
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 async def send_footage_page(user_id: int, message: Message, is_edit: bool = False):
+    logger.info(f"[send_footage_page] викликано для user_id={user_id}, is_edit={is_edit}")
     state = get_user_state(user_id)
     videos = state.get("videos", [])
     page = state.get("page", 0)
+    logger.info(f"[send_footage_page] Отримано стан: page={page}, відео знайдено={len(videos)}")
     cart = state.get("cart", [])
     
     if not videos or page >= len(videos):
@@ -63,22 +65,30 @@ async def send_footage_page(user_id: int, message: Message, is_edit: bool = Fals
     in_cart = hd_url in cart
     keyboard = get_footage_keyboard(page, len(videos), hd_url, in_cart, len(cart))
     
+    logger.info(f"[send_footage_page] Готую відправку: sd_url={sd_url[:50]}..., hd_url={hd_url[:50]}...")
+    
     text = (
         f"🎬 **{state['query'].capitalize()}**\n"
         f"⏱ Тривалість: {video.get('duration', 0)} сек.\n"
         f"👤 Автор: {video.get('user', {}).get('name', 'Невідомий')}"
     )
     
-    if is_edit:
-        if sd_url:
-            await message.edit_media(InputMediaVideo(media=sd_url, caption=text, parse_mode="Markdown"), reply_markup=keyboard)
+    try:
+        if is_edit:
+            logger.info(f"[send_footage_page] Спроба edit_media/edit_text")
+            if sd_url:
+                await message.edit_media(InputMediaVideo(media=sd_url, caption=text, parse_mode="Markdown"), reply_markup=keyboard)
+            else:
+                await message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
         else:
-            await message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
-    else:
-        if sd_url:
-            await message.answer_video(video=sd_url, caption=text, parse_mode="Markdown", reply_markup=keyboard)
-        else:
-            await message.answer(text, parse_mode="Markdown", reply_markup=keyboard)
+            logger.info(f"[send_footage_page] Спроба answer_video/answer")
+            if sd_url:
+                await message.answer_video(video=sd_url, caption=text, parse_mode="Markdown", reply_markup=keyboard)
+            else:
+                await message.answer(text, parse_mode="Markdown", reply_markup=keyboard)
+        logger.info(f"[send_footage_page] Успішно відправлено.")
+    except Exception as e:
+        logger.error(f"[send_footage_page] ПОМИЛКА ВІДПРАВКИ: {e}", exc_info=True)
 
 @router.callback_query(F.data == "noop")
 async def noop_callback(callback: CallbackQuery):
@@ -86,33 +96,45 @@ async def noop_callback(callback: CallbackQuery):
 
 @router.callback_query(F.data.startswith("page_"))
 async def page_callback(callback: CallbackQuery):
+    logger.info(f"[page_callback] Отримано callback: {callback.data}")
     page = int(callback.data.split("_")[1])
     user_id = callback.from_user.id
     update_user_state(user_id, "page", page)
+    logger.info(f"[page_callback] Стан оновлено, нова сторінка: {page}")
     
     await send_footage_page(user_id, callback.message, is_edit=True)
     await callback.answer()
+    logger.info(f"[page_callback] Завершено успішно")
 
 @router.callback_query(F.data == "add_cart")
 async def add_cart_callback(callback: CallbackQuery):
+    logger.info(f"[add_cart_callback] Отримано запит від {callback.from_user.id}")
     user_id = callback.from_user.id
     state = get_user_state(user_id)
     videos = state.get("videos", [])
     page = state.get("page", 0)
     
     if not videos:
+        logger.warning(f"[add_cart_callback] Відео не знайдено в стані для користувача {user_id}")
         await callback.answer("Помилка.", show_alert=True)
         return
         
     hd_url = get_best_video_file(videos[page])
+    logger.info(f"[add_cart_callback] Спроба додати в кошик URL: {hd_url[:50]}...")
     if add_to_cart(user_id, hd_url):
+        logger.info(f"[add_cart_callback] Успішно додано в кошик")
         await callback.answer("✅ Додано в кошик!")
         
         # Оновлюємо клавіатуру
         in_cart = True
         keyboard = get_footage_keyboard(page, len(videos), hd_url, in_cart, len(state["cart"]))
-        await callback.message.edit_reply_markup(reply_markup=keyboard)
+        try:
+            await callback.message.edit_reply_markup(reply_markup=keyboard)
+            logger.info(f"[add_cart_callback] Клавіатуру оновлено")
+        except Exception as e:
+            logger.error(f"[add_cart_callback] ПОМИЛКА оновлення клавіатури: {e}", exc_info=True)
     else:
+        logger.info(f"[add_cart_callback] Вже було у кошику")
         await callback.answer("Вже у кошику!")
 
 @router.callback_query(F.data == "download_single")

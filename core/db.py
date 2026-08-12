@@ -1,7 +1,9 @@
 import sqlite3
 import json
+import logging
 from typing import Dict, Any
 
+logger = logging.getLogger(__name__)
 DB_FILE = "bot_data.db"
 
 def init_db():
@@ -19,18 +21,22 @@ def init_db():
         conn.commit()
 
 def get_state(user_id: int) -> Dict[str, Any]:
+    logger.info(f"[db.get_state] Запит стану для user_id={user_id}")
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT query, videos, page, cart FROM user_states WHERE user_id = ?", (user_id,))
         row = cursor.fetchone()
         if row:
-            return {
+            state = {
                 "query": row[0],
                 "videos": json.loads(row[1]),
                 "page": row[2],
                 "cart": json.loads(row[3])
             }
+            logger.info(f"[db.get_state] Знайдено стан: page={state['page']}, videos={len(state['videos'])}, cart={len(state['cart'])}")
+            return state
         else:
+            logger.info(f"[db.get_state] Стан не знайдено, повертаю порожній")
             return {
                 "query": "",
                 "videos": [],
@@ -39,6 +45,7 @@ def get_state(user_id: int) -> Dict[str, Any]:
             }
 
 def save_state(user_id: int, state: Dict[str, Any]):
+    logger.info(f"[db.save_state] Збереження стану для user_id={user_id}, page={state.get('page')}, videos={len(state.get('videos', []))}")
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
         cursor.execute('''
