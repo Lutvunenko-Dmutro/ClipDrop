@@ -1,10 +1,10 @@
 import logging
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, URLInputFile, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
+from aiogram.types import Message, CallbackQuery, URLInputFile, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, InputMediaVideo
 
 from core.pexels_client import search_videos, get_best_video_file, get_lowest_video_file
 from core.bulk_downloader import create_bulk_pack
-from core.downloader import cleanup_file
+from core.downloader import cleanup_file, download_direct_file
 from core.state import get_user_state, update_user_state, add_to_cart, clear_cart
 
 router = Router()
@@ -42,14 +42,17 @@ def get_footage_keyboard(page: int, total: int, hd_url: str, in_cart: bool, cart
         
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-async def send_footage_page(user_id: int, message: Message):
+async def send_footage_page(user_id: int, message: Message, is_edit: bool = False):
     state = get_user_state(user_id)
     videos = state.get("videos", [])
     page = state.get("page", 0)
     cart = state.get("cart", [])
     
     if not videos or page >= len(videos):
-        await message.answer("Не знайдено більше футажів.")
+        if is_edit:
+            await message.edit_text("Не знайдено більше футажів.")
+        else:
+            await message.answer("Не знайдено більше футажів.")
         return
         
     video = videos[page]
@@ -65,11 +68,20 @@ async def send_footage_page(user_id: int, message: Message):
         f"👤 Автор: {video.get('user', {}).get('name', 'Невідомий')}"
     )
     
-    # Використовуємо SD відео як прев'ю, якщо воно є, інакше просто текст/картинка
-    if sd_url:
-        await message.answer_video(video=sd_url, caption=text, parse_mode="Markdown", reply_markup=keyboard)
+    if is_edit:
+        if sd_url:
+            await message.edit_media(InputMediaVideo(media=sd_url, caption=text, parse_mode="Markdown"), reply_markup=keyboard)
+        else:
+            await message.edit_text(text, parse_mode="Markdown", reply_markup=keyboard)
     else:
-        await message.answer(text, parse_mode="Markdown", reply_markup=keyboard)
+        if sd_url:
+            await message.answer_video(video=sd_url, caption=text, parse_mode="Markdown", reply_markup=keyboard)
+        else:
+            await message.answer(text, parse_mode="Markdown", reply_markup=keyboard)
+
+@router.callback_query(F.data == "noop")
+async def noop_callback(callback: CallbackQuery):
+    await callback.answer()
 
 @router.callback_query(F.data.startswith("page_"))
 async def page_callback(callback: CallbackQuery):
@@ -77,9 +89,7 @@ async def page_callback(callback: CallbackQuery):
     user_id = callback.from_user.id
     update_user_state(user_id, "page", page)
     
-    # Видаляємо старе повідомлення і надсилаємо нове, щоб замінити відео
-    await callback.message.delete()
-    await send_footage_page(user_id, callback.message)
+    await send_footage_page(user_id, callback.message, is_edit=True)
     await callback.answer()
 
 @router.callback_query(F.data == "add_cart")
@@ -116,7 +126,16 @@ async def download_single_callback(callback: CallbackQuery):
         return
         
     hd_url = get_best_video_file(videos[page])
-    await callback.message.answer_document(URLInputFile(hd_url, filename=f"footage_{user_id}.mp4"), caption="✅ Твій футаж!")
+    try:
+        status_msg = await callback.message.answer("⏳ Завантажую відео на сервер...")
+        local_path = await download_direct_file(hd_url)
+        await status_msg.edit_text("✅ Завантажено! Відправляю...")
+        await callback.message.answer_document(FSInputFile(local_path, filename=f"footage_{user_id}.mp4"), caption="✅ Твій футаж!")
+        await status_msg.delete()
+        cleanup_file(local_path)
+    except Exception as e:
+        logger.error(f"Помилка завантаження: {e}")
+        await callback.message.answer("❌ Не вдалося завантажити відео.")
 
 @router.callback_query(F.data == "download_cart")
 async def download_cart_callback(callback: CallbackQuery):

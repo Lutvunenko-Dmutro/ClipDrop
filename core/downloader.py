@@ -207,3 +207,21 @@ def cleanup_file(filepath: str):
             logger.info(f"Файл видалено: {filepath}")
     except Exception as e:
         logger.error(f"Помилка видалення файлу {filepath}: {e}")
+
+async def download_direct_file(url: str, ext: str = "mp4") -> str:
+    """Завантажує файл за прямим посиланням."""
+    file_id = str(uuid.uuid4())
+    output_path = os.path.join(VIDEOS_DIR, f"{file_id}.{ext}")
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            if resp.status == 200:
+                with open(output_path, 'wb') as f:
+                    while True:
+                        chunk = await resp.content.read(8192)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                return output_path
+            else:
+                raise RuntimeError(f"Не вдалося завантажити файл: HTTP {resp.status}")
