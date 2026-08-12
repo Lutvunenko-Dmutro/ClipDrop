@@ -6,37 +6,54 @@
         tg.setBackgroundColor('#09090b');
 
         let selectedUrls = new Set();
+        let currentPage = 1;
+        let currentQuery = '';
+        let isFetching = false;
         
         function searchCategory(category) {
             document.getElementById('searchInput').value = category;
-            search();
+            search(true);
         }
 
-        function search() {
+        function search(isNewSearch = true) {
             const query = document.getElementById('searchInput').value.trim();
             if(!query) return;
 
-            // Ховаємо пустий стан, показуємо лоадер
-            document.getElementById('emptyState').style.display = 'none';
-            document.getElementById('gallery').innerHTML = '';
+            if (isNewSearch) {
+                currentPage = 1;
+                currentQuery = query;
+                document.getElementById('emptyState').style.display = 'none';
+                document.getElementById('gallery').innerHTML = '';
+                // Даємо легку вібрацію тільки при новому пошуку
+                tg.HapticFeedback.impactOccurred('light');
+            }
+
+            if (isFetching) return;
+            isFetching = true;
+
             document.getElementById('loader').style.display = 'block';
 
-            // Даємо легку вібрацію
-            tg.HapticFeedback.impactOccurred('light');
-
-            fetch(`/api/search?q=${encodeURIComponent(query)}`)
+            fetch(`/api/search?q=${encodeURIComponent(currentQuery)}&page=${currentPage}`)
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('loader').style.display = 'none';
+                    isFetching = false;
+                    
                     if (data.videos.length === 0) {
-                        showError("Нічого не знайдено 😔");
+                        if (isNewSearch) {
+                            showError("Нічого не знайдено 😔");
+                        }
                     } else {
                         renderGallery(data.videos);
+                        currentPage++;
                     }
                 })
                 .catch(err => {
                     document.getElementById('loader').style.display = 'none';
-                    showError("Помилка завантаження. Спробуй ще раз.");
+                    isFetching = false;
+                    if (isNewSearch) {
+                        showError("Помилка завантаження. Спробуй ще раз.");
+                    }
                 });
         }
 
@@ -111,8 +128,17 @@
         document.getElementById('searchInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                search();
+                search(true);
                 // Ховаємо клавіатуру
                 this.blur(); 
+            }
+        });
+
+        // Нескінченна стрічка (Infinite Scroll)
+        window.addEventListener('scroll', () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                if (currentQuery && !isFetching) {
+                    search(false);
+                }
             }
         });

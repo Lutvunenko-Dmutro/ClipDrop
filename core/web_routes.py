@@ -21,10 +21,11 @@ async def web_app_handler(request):
 async def api_search(request):
     """API для пошуку футажів з Web App."""
     query = request.query.get("q", "")
+    page = int(request.query.get("page", 1))
     if not query:
         return web.json_response({"videos": []})
         
-    raw_videos = await search_videos(query, per_page=15)
+    raw_videos = await search_videos(query, per_page=15, page=page)
     videos = []
     for vid in raw_videos:
         hd_url = get_best_video_file(vid)
