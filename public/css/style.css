@@ -143,6 +143,8 @@
             background: linear-gradient(to right, #fff, #94a3b8);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            /* WebKit text fill is not fully supported without prefix */
+            -webkit-text-fill-color: transparent;
         }
 
         .empty-state p {
@@ -269,5 +271,3 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-    </style>
