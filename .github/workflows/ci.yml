@@ -37,3 +37,17 @@ jobs:
       run: |
         # Якщо в коді є помилки імпортів, цей рядок впаде
         python -m py_compile main.py
+        
+    - name: Запуск тестів (pytest)
+      run: |
+        pytest tests/
+        
+    - name: Trigger Render Deploy Hook
+      if: success()
+      run: |
+        if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
+          echo "RENDER_DEPLOY_HOOK_URL secret is not set, skipping deploy."
+        else
+          curl -X GET "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          echo "Deploy triggered!"
+        fi

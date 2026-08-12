@@ -7,6 +7,11 @@
 
         let selectedUrls = new Set();
         
+        function searchCategory(category) {
+            document.getElementById('searchInput').value = category;
+            search();
+        }
+
         function search() {
             const query = document.getElementById('searchInput').value.trim();
             if(!query) return;
