@@ -179,7 +179,7 @@ async def message_handler_search(message: Message):
             query = url
             status_msg = await message.reply(f"🔍 Шукаю футажі для: **{query}**...", parse_mode="Markdown")
             
-            videos = await search_videos(query, per_page=15)
+            videos = await search_videos(query, per_page=80)
             if not videos:
                 await status_msg.edit_text("❌ Нічого не знайдено.")
                 return
