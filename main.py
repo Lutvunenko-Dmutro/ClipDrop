@@ -44,6 +44,18 @@ async def on_startup(bot: Bot):
     logger.info(f"✅ Webhook встановлено: {webhook_full_url}")
 
 async def on_startup_polling(bot: Bot):
+    webhook_info = await bot.get_webhook_info()
+    if webhook_info.url:
+        logger.warning(f"⚠️ Увага! Бот зараз підключений до Webhook: {webhook_info.url}")
+        logger.warning("Запуск Polling видалить Webhook, і продакшен-сервер (Render) "
+                       "перестане працювати!")
+        if os.getenv("FORCE_POLLING", "False").lower() not in ("true", "1", "yes"):
+            logger.error("❌ Запуск скасовано для захисту продакшену. "
+                         "Додайте FORCE_POLLING=True у ваш локальний файл .env, "
+                         "якщо ви ДІЙСНО хочете перехопити бота на свій комп'ютер.")
+            import sys
+            sys.exit(1)
+            
     await bot.delete_webhook(drop_pending_updates=True)
     logger.info("✅ Запущено режим Polling (Локальне тестування)")
 
