@@ -109,7 +109,11 @@
 
         function updateMainButton() {
             if (selectedUrls.size > 0) {
-                tg.MainButton.text = `ЗАВАНТАЖИТИ ZIP (${selectedUrls.size})`;
+                if (selectedUrls.size === 1) {
+                    tg.MainButton.text = `ЗАВАНТАЖИТИ ВІДЕО`;
+                } else {
+                    tg.MainButton.text = `ЗАВАНТАЖИТИ ZIP (${selectedUrls.size})`;
+                }
                 tg.MainButton.color = '#6366f1';
                 tg.MainButton.textColor = '#ffffff';
                 if (!tg.MainButton.isVisible) tg.MainButton.show();
