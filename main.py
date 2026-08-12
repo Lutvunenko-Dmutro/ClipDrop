@@ -8,7 +8,7 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from core.handlers import router
-from core.pexels_client import search_videos, get_best_video_file, get_lowest_video_file
+from core.web_routes import health_check, web_app_handler, api_search
 
 # Налаштування логування
 logging.basicConfig(
@@ -26,41 +26,6 @@ WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 WEBHOOK_PATH   = "/webhook"
 PORT           = int(os.environ.get("PORT", 8080))
 USE_WEBHOOK    = os.getenv("USE_WEBHOOK", "True").lower() in ("true", "1", "yes")
-
-# ============================================================
-#  Хендлери веб-сервера
-# ============================================================
-async def health_check(request):
-    """Для Render health check та браузерної перевірки."""
-    return web.Response(text="✅ ClipDrop Bot is running!")
-
-async def web_app_handler(request):
-    """Віддає сторінку Web App (index.html)."""
-    with open("public/index.html", "r", encoding="utf-8") as f:
-        html = f.read()
-    return web.Response(text=html, content_type="text/html")
-
-async def api_search(request):
-    """API для пошуку футажів з Web App."""
-    query = request.query.get("q", "")
-    if not query:
-        return web.json_response({"videos": []})
-        
-    raw_videos = await search_videos(query, per_page=15)
-    videos = []
-    for vid in raw_videos:
-        hd_url = get_best_video_file(vid)
-        sd_url = get_lowest_video_file(vid)
-        if hd_url and sd_url:
-            videos.append({
-                "id": vid.get("id"),
-                "sd_url": sd_url,
-                "hd_url": hd_url,
-                "duration": vid.get("duration", 0),
-                "author": vid.get("user", {}).get("name", "Невідомий")
-            })
-            
-    return web.json_response({"videos": videos})
 
 # ============================================================
 #  Старт і зупинка
