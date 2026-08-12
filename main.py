@@ -39,9 +39,10 @@ async def on_startup(bot: Bot):
     await bot.set_webhook(
         url=webhook_full_url,
         secret_token=WEBHOOK_SECRET if WEBHOOK_SECRET else None,
-        drop_pending_updates=False
+        drop_pending_updates=False,
+        allowed_updates=["message", "callback_query", "inline_query", "web_app_data"]
     )
-    logger.info(f"✅ Webhook встановлено: {webhook_full_url}")
+    logger.info(f"✅ Webhook встановлено: {webhook_full_url} (allowed_updates: message, callback_query, web_app_data)")
 
 async def on_startup_polling(bot: Bot):
     webhook_info = await bot.get_webhook_info()
