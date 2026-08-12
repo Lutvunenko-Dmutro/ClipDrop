@@ -1,120 +1,204 @@
-<p align="center">
-  <img src="assets/avatar.png" width="150" alt="ClipDrop Bot Avatar"/>
+﻿<p align="center">
+  <img src="assets/avatar.png" width="140" alt="ClipDrop Bot"/>
 </p>
 
-# 🎬 ClipDrop — Універсальний Telegram Медіа-комбайн
+<h1 align="center">🎬 ClipDrop Bot</h1>
 
-![Python](https://img.shields.io/badge/python-3.10+-blue.svg)
-![aiogram](https://img.shields.io/badge/aiogram-3.15-2BA86D.svg)
-![yt-dlp](https://img.shields.io/badge/yt--dlp-latest-red.svg)
+<p align="center">
+  <b>Твій особистий медіа-комбайн у Telegram для відеомейкерів і контент-мейкерів</b>
+</p>
 
-**ClipDrop** — це не просто бот, а потужний інструмент для відеомейкерів та контент-мейкерів. Він дозволяє не лише завантажувати медіа з **YouTube** та **TikTok**, але й шукати безкоштовні стокові футажі на **Pexels**, збирати їх у кошик та вивантажувати пачками у вигляді ZIP-архівів!
-
----
-
-## ✨ Основні можливості
-
-- 📹 **Pexels Stock Footage:** Парсинг і пошук стокових відео прямо в Телеграмі за ключовими словами. Бот перемішує результати, щоб кожен пошук був унікальним.
-- 🛒 **Кошик та Bulk ZIP:** Збирайте потрібні футажі в кошик (який надійно зберігається в базі даних SQLite) та завантажуйте всю пачку одним ZIP-архівом для зручного монтажу.
-- 🖼 **Web App (Mini App):** Вбудована красива Галерея прямо всередині Telegram для візуального пошуку та зручного вибору відео.
-- 🎵 **TikTok:** Миттєве завантаження відео в найкращій якості без водяних знаків (автоматично розпаковує короткі посилання `vm.tiktok.com`).
-- 📺 **YouTube (RapidAPI & yt-dlp):** Швидке завантаження через API (для обходу 429 Too Many Requests) або локальний fallback через `yt-dlp`.
-- 🗜 **Авто-стиснення (FFmpeg):** Якщо відео (YouTube або Pexels) важить понад 50 МБ (ліміт Telegram), бот автоматично стискає його без втрати якості, щоб ви гарантовано отримали файл.
-- 🪝 **Режим Webhook:** Бот оптимізований для розгортання без "засинання" на платформах типу Render.
-- 💾 **SQLite Storage:** Надійне збереження стану користувачів (сторінки пошуку, кошики), стійке до перезапусків сервера.
+<p align="center">
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white"/></a>
+  <a href="https://docs.aiogram.dev/"><img src="https://img.shields.io/badge/aiogram-3.15-2BA86D?style=for-the-badge&logo=telegram&logoColor=white"/></a>
+  <a href="https://github.com/yt-dlp/yt-dlp"><img src="https://img.shields.io/badge/yt--dlp-latest-FF0000?style=for-the-badge&logo=youtube&logoColor=white"/></a>
+  <a href="https://www.pexels.com/api/"><img src="https://img.shields.io/badge/Pexels-API-05A081?style=for-the-badge&logo=pexels&logoColor=white"/></a>
+  <a href="https://render.com/"><img src="https://img.shields.io/badge/Deploy-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white"/></a>
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge"/>
+</p>
 
 ---
 
-## 🛠 Змінні оточення (.env)
+## 🌟 Що це таке?
 
-Для роботи бота необхідно створити файл `.env` у корені проєкту:
+**ClipDrop** — це не просто бот для завантаження відео. Це **повноцінний інструмент автоматизації** для людей, що займаються відеомонтажем, рілс, кліпами або будь-яким відео-контентом.
 
-```env
-# Токен вашого Telegram-бота (отримайте у @BotFather)
-TOKEN=your_telegram_bot_token
+Уяви: тобі потрібно 15 якісних безкоштовних футажів з природою для монтажу. Зазвичай це 15 відкритих вкладок, 15 ручних завантажень, хаос у папці «Завантаження». З ClipDrop — ти пишеш одне слово в Telegram, перегортаєш 80 відео одним пальцем, клікаєш «В кошик» на тих, що сподобались, і тиснеш **одну кнопку** — бот сам качає, пакує в ZIP і надсилає тобі готовий архів.
 
-# Ключ від YouTube Video FAST Downloader 24/7 (RapidAPI)
-RAPIDAPI_KEY=your_rapidapi_key
+---
 
-# Ваш Telegram user_id (без обмежень для власника бота)
-OWNER_ID=your_telegram_user_id
+## ✨ Можливості
 
-# Публічна URL-адреса вашого сервера (для Webhook режиму)
-# Наприклад: https://your-service.onrender.com
-WEBHOOK_URL=https://your-service.onrender.com
+### 📹 Pexels Footage Finder
+Пошук і перегляд стокових відео прямо в Telegram-чаті.
+- Введи будь-яке слово → отримай до **80 відео** за один запит
+- Перегортай відео кнопками ⬅️ ➡️ без жодного очікування
+- Результати **перемішуються** при кожному новому пошуку для різноманітності
+- Дивись прев'ю відео прямо в чаті, завантажуй HD-оригінал одним тапом
 
-# Секретний ключ для захисту Webhook (будь-який складний пароль)
-WEBHOOK_SECRET=MySuperSecretToken123
+### 🛒 Розумний Кошик + Bulk ZIP
+Збирай футажі й завантажуй пачками — як в інтернет-магазині.
+- Додавай відео в кошик під час перегляду пошукової видачі
+- Кошик **зберігається в базі даних** — не зникає при перезапуску сервера
+- Завантаж усі відео одним ZIP-архівом (`📦 Завантажити ZIP (N)`)
+- Якщо архів > 45 МБ — бот автоматично завантажує його на **GoFile.io** і надсилає пряме посилання
+
+### 🖼 Web App — Галерея
+Вбудований міні-застосунок прямо всередині Telegram.
+- Відкривається кнопкою **«🖼 Відкрити Галерею»** без виходу з Telegram
+- Зручний grid-інтерфейс для швидкого перегляду великої кількості відео
+- Відправляє вибрані відео або ZIP-архів прямо в чат
+
+### 🎵 TikTok Downloader
+- Завантаження у найкращій доступній якості, **без водяних знаків**
+- Автоматично розпаковує короткі посилання `vm.tiktok.com` та `vt.tiktok.com`
+- Детектує фото-пости та повідомляє замість краша
+
+### 📺 YouTube Downloader
+- **RapidAPI** — основний режим для обходу блокувань датацентрових IP (Error 429)
+- **yt-dlp** — автоматичний fallback з імітацією Android-клієнта
+- Прогрес конвертації відображається в реальному часі
+
+### 🗜 Авто-стиснення (FFmpeg)
+- Якщо файл > **49.5 МБ** (ліміт Telegram API = 50 МБ) — бот автоматично стискає відео до 720p
+- Стиснення відбувається асинхронно, не блокуючи інших користувачів
+- Тимчасові файли видаляються одразу після відправки (Zero-Trace)
+
+### 🛡 Безпека та Стабільність
+- **SQL Injection Protection** — всі запити до SQLite через параметризовані `?`-запити
+- **Webhook Secret Token** — блокує підроблені запити від сторонніх
+- **Anti-flood** — захист від спаму запитами
+- **Daily Limit** — ліміт завантажень на день, з bypass для `OWNER_ID`
+- **`allowed_updates`** явно вказані: `message`, `callback_query`, `web_app_data`
+
+---
+
+## 🏗 Архітектура проєкту
+
+```
+my-telegram-bot/
+├── main.py                    # Точка входу: Webhook / Polling режими
+├── core/
+│   ├── handlers/
+│   │   ├── __init__.py        # Реєстрація роутерів (порядок важливий)
+│   │   ├── commands.py        # /start, /version
+│   │   ├── search.py          # Pexels пошук, пагінація, кошик
+│   │   ├── downloader.py      # YouTube + TikTok завантаження
+│   │   └── webapp.py          # Обробка даних з Web App
+│   ├── db.py                  # SQLite: init, get_state, save_state
+│   ├── state.py               # Інтерфейс для роботи зі станом
+│   ├── pexels_client.py       # Pexels API клієнт
+│   ├── downloader.py          # FFmpeg, yt-dlp, завантаження файлів
+│   ├── bulk_downloader.py     # Паралельне завантаження + ZIP
+│   ├── gofile_client.py       # Завантаження великих архівів на GoFile.io
+│   ├── limiter.py             # Anti-flood + денний ліміт
+│   └── web_routes.py          # aiohttp: health check, Web App, API
+├── public/
+│   ├── index.html             # Web App (Telegram Mini App)
+│   ├── css/style.css
+│   └── js/app.js
+├── Dockerfile                 # Docker з ffmpeg включно
+└── requirements.txt
 ```
 
 ---
 
-## 🚀 Встановлення та запуск (Локально)
+## 🛠 Налаштування (.env)
 
-1. **Встановіть залежності системи:**
-   Переконайтеся, що у вас встановлено Python 3.10+ та **FFmpeg**. 
-   - На Windows: завантажте з офіційного сайту та додайте в PATH.
-   - На Linux: `sudo apt install ffmpeg`
+Створи файл `.env` у корені проєкту:
 
-2. **Встановіть Python-бібліотеки:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+```env
+# ── Обов'язкові ──────────────────────────────────────────────
+TOKEN=1234567890:AAFxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+PEXELS_API_KEY=your_pexels_api_key
 
-3. **Створіть `.env` файл** (див. розділ вище).
+# ── YouTube ───────────────────────────────────────────────────
+RAPIDAPI_KEY=your_rapidapi_key
 
-4. **Запустіть бота:**
-   ```bash
-   python main.py
-   ```
+# ── Для Webhook-режиму (потрібен при деплої на Render) ────────
+WEBHOOK_URL=https://your-service.onrender.com
+WEBHOOK_SECRET=MySuperSecretToken123
+
+# ── Додаткові ─────────────────────────────────────────────────
+OWNER_ID=123456789
+
+# Для локального тестування: вимикає Webhook, вмикає Polling
+USE_WEBHOOK=False
+```
+
+> **Як дізнатись свій `OWNER_ID`?** Напиши [@userinfobot](https://t.me/userinfobot) в Telegram.
 
 ---
 
-## 🐳 Встановлення (через Docker)
+## 🚀 Запуск локально
 
-Це найзручніший спосіб розгортання, оскільки Docker-образ вже містить у собі встановлений `ffmpeg`.
+**1. Встанови FFmpeg:**
+
+| ОС | Команда |
+|----|---------|
+| Windows | [Завантаж](https://ffmpeg.org/download.html), додай у `PATH` |
+| Ubuntu / Debian | `sudo apt install ffmpeg` |
+| macOS | `brew install ffmpeg` |
+
+**2. Встанови Python-бібліотеки:**
+```bash
+pip install -r requirements.txt
+```
+
+**3. Налаштуй `.env`** (обов'язково `USE_WEBHOOK=False` для локалки).
+
+**4. Запусти:**
+```bash
+python main.py
+```
+
+Бот стартує в режимі Polling + підніме веб-сервер на `http://localhost:8080` для Web App.
+
+---
+
+## 🐳 Docker
 
 ```bash
-# 1. Збірка образу
+# Збірка (ffmpeg вже всередині образу)
 docker build -t clipdrop-bot .
 
-# 2. Запуск контейнера у фоновому режимі (з підключенням .env файлу)
+# Запуск
 docker run -d --name clipdrop-bot --env-file .env clipdrop-bot
 ```
 
 ---
 
-## ☁️ Деплой на Render (Безкоштовно)
+## ☁️ Безкоштовний деплой на Render
 
-Бот ідеально оптимізований для розгортання на безкоштовному тарифі [Render.com](https://render.com/).
+**Кроки:**
 
-1. Зробіть **Fork** або завантажте цей репозиторій на свій GitHub.
-2. Створіть новий **Web Service** на Render.
-3. Підключіть свій репозиторій.
-4. Вкажіть **Environment**: `Docker` (Render сам прочитає `Dockerfile` і встановить `ffmpeg`).
-8. У розділі **Environment Variables** обов'язково додайте:
-   - `TOKEN`
-   - `RAPIDAPI_KEY`
-   - `OWNER_ID` (твій ID у Telegram)
-   - `WEBHOOK_URL` (URL сервісу на Render, наприклад `https://clipdrop-0wbc.onrender.com`)
-   - `WEBHOOK_SECRET` (будь-який надійний пароль для захисту)
-9. Натисніть **Deploy**.
+1. Зроби **Fork** цього репозиторію на свій GitHub
+2. Зайди на [render.com](https://render.com) → **New Web Service**
+3. Підключи свій репозиторій
+4. **Environment** → вибери `Docker`
+5. Додай **Environment Variables**:
 
-> **Примітка:** Оскільки Render використовує датацентрові IP, без використання RapidAPI завантаження з YouTube може блокуватися (HTTP Error 429). Бот обробляє це автоматично завдяки інтеграції RapidAPI.
-> **Примітка 2:** Завдяки режиму Webhook, бот ніколи не "пропустить" повідомлення, навіть якщо Render тимчасово "засне". Наступне повідомлення від Telegram просто розбудить сервер (відповідь може зайняти ~30-40 сек), і далі бот працюватиме миттєво.
+| Змінна | Значення |
+|--------|----------|
+| `TOKEN` | Токен бота від @BotFather |
+| `PEXELS_API_KEY` | Ключ з [pexels.com/api](https://www.pexels.com/api/) |
+| `RAPIDAPI_KEY` | Ключ з RapidAPI |
+| `WEBHOOK_URL` | `https://your-app.onrender.com` |
+| `WEBHOOK_SECRET` | Будь-який складний пароль |
+| `OWNER_ID` | Твій Telegram ID |
+
+6. Натисни **Deploy** — готово!
+
+> **💡 Free Tier:** Сервер «засинає» через 15 хв бездіяльності. Webhook-режим гарантує, що перше повідомлення розбудить сервер (~30 сек), і далі все працює миттєво без втрати жодного оновлення.
+
 ---
 
-## 🤝 Співпраця (Contributing)
+## 🤝 Contributing
 
-Ми вітаємо будь-які покращення! Якщо ви хочете додати нову фічу або виправити баг:
-1. Зробіть **Fork** цього репозиторію.
-2. Внесіть зміни у вашому форку.
-3. Створіть **Pull Request**.
-
-Детальнішу інструкцію читайте у файлі [CONTRIBUTING.md](CONTRIBUTING.md).
+Читай [CONTRIBUTING.md](CONTRIBUTING.md) перед Pull Request.
 
 ---
 
 ## 📄 Ліцензія
 
-Цей проєкт поширюється під ліцензією [MIT](LICENSE).
+Поширюється під ліцензією [MIT](LICENSE).
