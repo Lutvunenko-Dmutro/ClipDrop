@@ -16,7 +16,11 @@ async def resolve_tiktok_redirect(url: str) -> str:
         async with session.get(url, allow_redirects=True) as resp:
             return str(resp.url)
 
-@router.message(F.text)
+def is_video_link(message: Message) -> bool:
+    text = message.text.lower()
+    return "tiktok.com" in text or "youtube.com" in text or "youtu.be" in text
+
+@router.message(F.text, is_video_link)
 async def message_handler_downloader(message: Message):
     url = message.text.strip()
     user_id = message.from_user.id
@@ -24,9 +28,6 @@ async def message_handler_downloader(message: Message):
     # Перевірка на TikTok / YouTube
     is_tiktok = "tiktok.com" in url.lower()
     is_youtube = "youtube.com" in url.lower() or "youtu.be" in url.lower()
-
-    if not is_tiktok and not is_youtube:
-        return # Буде оброблено в search.py
 
     # ── Перевірка лімітів (Anti-flood + Daily limit) ──────────────────
     allowed, reason = check_limits(user_id)
