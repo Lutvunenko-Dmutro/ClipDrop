@@ -1,0 +1,39 @@
+name: Python CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Перевірка коду (Checkout)
+      uses: actions/checkout@v4
+      
+    - name: Налаштування Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+        cache: "pip"
+        
+    - name: Встановлення залежностей
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install flake8
+        
+    - name: Лінтер (Flake8)
+      run: |
+        # Зупиняє білд, якщо є синтаксичні помилки (E9, F63, F7, F82)
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Загальна перевірка (тільки як попередження)
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        
+    - name: Базова перевірка імпортів
+      run: |
+        # Якщо в коді є помилки імпортів, цей рядок впаде
+        python -m py_compile main.py
