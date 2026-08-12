@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Footage Gallery</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #1a1a1a);
+            --text-color: var(--tg-theme-text-color, #ffffff);
+            --btn-color: var(--tg-theme-button-color, #2481cc);
+            --btn-text-color: var(--tg-theme-button-text-color, #ffffff);
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 16px;
+        }
+        .header {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-color);
+            outline: none;
+            font-size: 16px;
+        }
+        button.search-btn {
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: none;
+            background-color: var(--btn-color);
+            color: var(--btn-text-color);
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .video-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .video-card.selected {
+            border-color: var(--btn-color);
+            transform: scale(0.95);
+        }
+        .video-card video {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+        .checkmark {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--btn-color);
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .video-card.selected .checkmark {
+            opacity: 1;
+        }
+        .loading {
+            text-align: center;
+            margin-top: 50px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <input type="text" id="searchInput" placeholder="Пошук футажів...">
+        <button class="search-btn" onclick="search()">Знайти</button>
+    </div>
+
+    <div class="loading" id="loading">⏳ Шукаємо...</div>
+    <div class="gallery" id="gallery"></div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        let selectedUrls = new Set();
+        let currentVideos = [];
+
+        function search() {
+            const query = document.getElementById('searchInput').value.trim();
+            if(!query) return;
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('gallery').innerHTML = '';
+
+            fetch(`/api/search?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    renderGallery(data.videos);
+                })
+                .catch(err => {
+                    document.getElementById('loading').textContent = 'Помилка завантаження';
+                });
+        }
+
+        function renderGallery(videos) {
+            const gallery = document.getElementById('gallery');
+            currentVideos = videos;
+
+            videos.forEach((vid, index) => {
+                const card = document.createElement('div');
+                card.className = 'video-card';
+                
+                // Якщо відео вже було вибрано раніше (за URL)
+                if (selectedUrls.has(vid.hd_url)) {
+                    card.classList.add('selected');
+                }
+
+                card.innerHTML = `
+                    <video src="${vid.sd_url}" autoplay loop muted playsinline></video>
+                    <div class="checkmark">✓</div>
+                `;
+                
+                card.onclick = () => toggleSelect(card, vid.hd_url);
+                gallery.appendChild(card);
+            });
+        }
+
+        function toggleSelect(card, hd_url) {
+            if (selectedUrls.has(hd_url)) {
+                selectedUrls.delete(hd_url);
+                card.classList.remove('selected');
+            } else {
+                selectedUrls.add(hd_url);
+                card.classList.add('selected');
+            }
+            updateMainButton();
+        }
+
+        function updateMainButton() {
+            if (selectedUrls.size > 0) {
+                tg.MainButton.text = `ЗАВАНТАЖИТИ ZIP (${selectedUrls.size})`;
+                tg.MainButton.show();
+            } else {
+                tg.MainButton.hide();
+            }
+        }
+
+        tg.MainButton.onClick(() => {
+            const urls = Array.from(selectedUrls);
+            tg.sendData(JSON.stringify({ action: "download_zip", urls: urls }));
+        });
+
+        // Запуск пошуку клавішею Enter
+        document.getElementById('searchInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') search();
+        });
+    </script>
+</body>
+</html>
