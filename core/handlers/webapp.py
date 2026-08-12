@@ -36,7 +36,9 @@ async def web_app_data_handler(message: Message):
                         async with session.get(url) as resp:
                             if resp.status == 200:
                                 with open(temp_path, "wb") as f:
-                                    f.write(await resp.read())
+                                    # БАГ-ФІКС: потокове читання по чанках (не в RAM)
+                                    async for chunk in resp.content.iter_chunked(1024 * 1024):
+                                        f.write(chunk)
                                 
                                 await status_msg.edit_text("✅ Надсилаю відео...")
                                 video = FSInputFile(temp_path)

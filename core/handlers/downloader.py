@@ -77,7 +77,10 @@ async def process_video_task(message: Message, url: str, is_tiktok: bool, is_you
         record_request(user_id)
 
         # Видаляємо повідомлення "Обробляю..."
-        await wait_msg.delete()
+        try:
+            await wait_msg.delete()
+        except Exception:
+            pass  # якщо повідомлення вже видалено або недоступне — не падаємо
 
     except Exception as e:
         logger.error(f"Помилка завантаження {url}: {e}", exc_info=True)

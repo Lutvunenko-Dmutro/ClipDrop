@@ -1,7 +1,8 @@
 import logging
 import random
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery, URLInputFile, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, InputMediaVideo
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, InputMediaVideo
+from aiogram.exceptions import TelegramBadRequest
 
 from core.pexels_client import search_videos, get_best_video_file, get_lowest_video_file
 from core.bulk_downloader import create_bulk_pack
@@ -25,12 +26,12 @@ def get_footage_keyboard(page: int, total: int, hd_url: str, in_cart: bool, cart
     if nav_row:
         buttons.append(nav_row)
         
-    # Дії з відео
+    # Дії з відео — БАГ-ФІКС: якщо hd_url порожній, не додаємо url= кнопку
     cart_text = "🛒 В кошику" if in_cart else "🛒 Додати в кошик"
-    buttons.append([
-        InlineKeyboardButton(text="📥 В Telegram", callback_data="download_single"),
-        InlineKeyboardButton(text="🌐 Оригінал", url=hd_url)
-    ])
+    action_row = [InlineKeyboardButton(text="📥 В Telegram", callback_data="download_single")]
+    if hd_url:
+        action_row.append(InlineKeyboardButton(text="🌐 Оригінал", url=hd_url))
+    buttons.append(action_row)
     
     buttons.append([
         InlineKeyboardButton(text=cart_text, callback_data="add_cart")
@@ -62,10 +63,17 @@ async def send_footage_page(user_id: int, message: Message, is_edit: bool = Fals
     hd_url = get_best_video_file(video)
     sd_url = get_lowest_video_file(video)
     
+    # БАГ-ФІКС: якщо hd_url порожній — пропускаємо це відео
+    if not hd_url:
+        logger.warning(f"[send_footage_page] Порожній hd_url на сторінці {page}, пропускаю.")
+        update_user_state(user_id, "page", page + 1)
+        await send_footage_page(user_id, message, is_edit=is_edit)
+        return
+    
     in_cart = hd_url in cart
     keyboard = get_footage_keyboard(page, len(videos), hd_url, in_cart, len(cart))
     
-    logger.info(f"[send_footage_page] Готую відправку: sd_url={sd_url[:50]}..., hd_url={hd_url[:50]}...")
+    logger.info(f"[send_footage_page] Готую відправку: sd_url={sd_url[:50] if sd_url else 'EMPTY'}, hd_url={hd_url[:50]}")
     
     text = (
         f"🎬 **{state['query'].capitalize()}**\n"
@@ -87,6 +95,12 @@ async def send_footage_page(user_id: int, message: Message, is_edit: bool = Fals
             else:
                 await message.answer(text, parse_mode="Markdown", reply_markup=keyboard)
         logger.info(f"[send_footage_page] Успішно відправлено.")
+    except TelegramBadRequest as e:
+        # БАГ-ФІКС: 'message is not modified' — не фатальна помилка, просто ігноруємо
+        if "message is not modified" in str(e).lower():
+            logger.info(f"[send_footage_page] Повідомлення не змінилось (той самий URL), ігноруємо.")
+        else:
+            logger.error(f"[send_footage_page] TelegramBadRequest: {e}", exc_info=True)
     except Exception as e:
         logger.error(f"[send_footage_page] ПОМИЛКА ВІДПРАВКИ: {e}", exc_info=True)
 
@@ -125,12 +139,15 @@ async def add_cart_callback(callback: CallbackQuery):
         logger.info(f"[add_cart_callback] Успішно додано в кошик")
         await callback.answer("✅ Додано в кошик!")
         
-        # Оновлюємо клавіатуру
+        # БАГ-ФІКС: читаємо ОНОВЛЕНИЙ стан після запису в БД для правильного підрахунку кошика
+        updated_state = get_user_state(user_id)
         in_cart = True
-        keyboard = get_footage_keyboard(page, len(videos), hd_url, in_cart, len(state["cart"]))
+        keyboard = get_footage_keyboard(page, len(videos), hd_url, in_cart, len(updated_state["cart"]))
         try:
             await callback.message.edit_reply_markup(reply_markup=keyboard)
-            logger.info(f"[add_cart_callback] Клавіатуру оновлено")
+            logger.info(f"[add_cart_callback] Клавіатуру оновлено, кошик тепер: {len(updated_state['cart'])} відео")
+        except TelegramBadRequest as e:
+            logger.warning(f"[add_cart_callback] TelegramBadRequest при оновленні клавіатури: {e}")
         except Exception as e:
             logger.error(f"[add_cart_callback] ПОМИЛКА оновлення клавіатури: {e}", exc_info=True)
     else:
