@@ -2,6 +2,7 @@ import os
 import logging
 import asyncio
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from aiohttp import web
@@ -12,20 +13,20 @@ from core.web_routes import health_check, web_app_handler, api_search
 
 # Налаштування логування
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
 # ============================================================
 #  Конфігурація
 # ============================================================
-TOKEN          = os.getenv("TOKEN")
-WEBHOOK_URL    = os.getenv("WEBHOOK_URL", "").rstrip("/")
+TOKEN = os.getenv("TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "").rstrip("/")
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
-WEBHOOK_PATH   = "/webhook"
-PORT           = int(os.environ.get("PORT", 8080))
-USE_WEBHOOK    = os.getenv("USE_WEBHOOK", "True").lower() in ("true", "1", "yes")
+WEBHOOK_PATH = "/webhook"
+PORT = int(os.environ.get("PORT", 8080))
+USE_WEBHOOK = os.getenv("USE_WEBHOOK", "True").lower() in ("true", "1", "yes")
+
 
 # ============================================================
 #  Старт і зупинка
@@ -40,33 +41,45 @@ async def on_startup(bot: Bot):
         url=webhook_full_url,
         secret_token=WEBHOOK_SECRET if WEBHOOK_SECRET else None,
         drop_pending_updates=False,
-        allowed_updates=["message", "callback_query", "inline_query", "web_app_data"]
+        allowed_updates=["message", "callback_query", "inline_query", "web_app_data"],
     )
-    logger.info(f"✅ Webhook встановлено: {webhook_full_url} (allowed_updates: message, callback_query, web_app_data)")
+    logger.info(
+        f"✅ Webhook встановлено: {webhook_full_url} (allowed_updates: message, callback_query, web_app_data)"
+    )
+
 
 async def on_startup_polling(bot: Bot):
     webhook_info = await bot.get_webhook_info()
     if webhook_info.url:
         logger.warning(f"⚠️ Увага! Бот зараз підключений до Webhook: {webhook_info.url}")
-        logger.warning("Запуск Polling видалить Webhook, і продакшен-сервер (Render) "
-                       "перестане працювати!")
+        logger.warning(
+            "Запуск Polling видалить Webhook, і продакшен-сервер (Render) "
+            "перестане працювати!"
+        )
         if os.getenv("FORCE_POLLING", "False").lower() not in ("true", "1", "yes"):
-            logger.error("❌ Запуск скасовано для захисту продакшену. "
-                         "Додайте FORCE_POLLING=True у ваш локальний файл .env, "
-                         "якщо ви ДІЙСНО хочете перехопити бота на свій комп'ютер.")
+            logger.error(
+                "❌ Запуск скасовано для захисту продакшену. "
+                "Додайте FORCE_POLLING=True у ваш локальний файл .env, "
+                "якщо ви ДІЙСНО хочете перехопити бота на свій комп'ютер."
+            )
             import sys
+
             sys.exit(1)
-            
+
     await bot.delete_webhook(drop_pending_updates=True)
     logger.info("✅ Запущено режим Polling (Локальне тестування)")
 
-async def start_polling_and_web(dp: Dispatcher, bot: Bot, app: web.Application, port: int):
+
+async def start_polling_and_web(
+    dp: Dispatcher, bot: Bot, app: web.Application, port: int
+):
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', port)
+    site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
     logger.info(f"✅ Локальний веб-сервер запущено на http://localhost:{port}")
     await dp.start_polling(bot)
+
 
 # ============================================================
 #  Точка входу
@@ -77,9 +90,9 @@ def main():
         return
 
     bot = Bot(token=TOKEN)
-    dp  = Dispatcher()
+    dp = Dispatcher()
     dp.include_router(router)
-    
+
     app = web.Application()
     app.router.add_get("/", health_check)
     app.router.add_get("/app", web_app_handler)
@@ -89,9 +102,9 @@ def main():
     if USE_WEBHOOK:
         dp.startup.register(on_startup)
         SimpleRequestHandler(
-            dispatcher=dp, 
-            bot=bot, 
-            secret_token=WEBHOOK_SECRET if WEBHOOK_SECRET else None
+            dispatcher=dp,
+            bot=bot,
+            secret_token=WEBHOOK_SECRET if WEBHOOK_SECRET else None,
         ).register(app, path=WEBHOOK_PATH)
         setup_application(app, dp, bot=bot)
         logger.info(f"🚀 Запуск ClipDrop Webhook сервера на порту {PORT}...")
@@ -100,6 +113,7 @@ def main():
         dp.startup.register(on_startup_polling)
         logger.info("🚀 Запуск ClipDrop у режимі Polling...")
         asyncio.run(start_polling_and_web(dp, bot, app, PORT))
+
 
 if __name__ == "__main__":
     main()

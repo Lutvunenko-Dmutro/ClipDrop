@@ -4,6 +4,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+
 async def get_best_server() -> Optional[str]:
     """Отримує найкращий сервер GoFile для завантаження."""
     url = "https://api.gofile.io/servers"
@@ -22,6 +23,7 @@ async def get_best_server() -> Optional[str]:
         logger.error(f"Помилка при отриманні сервера GoFile: {e}")
         return None
 
+
 async def upload_file_to_gofile(file_path: str) -> Optional[str]:
     """
     Завантажує файл на GoFile і повертає публічне посилання (downloadPage).
@@ -32,13 +34,13 @@ async def upload_file_to_gofile(file_path: str) -> Optional[str]:
         return None
 
     url = f"https://{server_name}.gofile.io/contents/uploadfile"
-    
+
     try:
         async with aiohttp.ClientSession() as session:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 data = aiohttp.FormData()
-                data.add_field('file', f, filename=file_path.split("/")[-1])
-                
+                data.add_field("file", f, filename=file_path.split("/")[-1])
+
                 async with session.post(url, data=data) as response:
                     if response.status == 200:
                         json_data = await response.json()

@@ -24,14 +24,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install flake8
         
-    - name: Лінтер (Flake8)
+    - name: Лінтер та Форматер (Ruff)
       run: |
-        # Зупиняє білд, якщо є синтаксичні помилки (E9, F63, F7, F82)
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Загальна перевірка (тільки як попередження)
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        # Перевірка синтаксису та імпортів
+        ruff check .
+        # Перевірка форматування
+        ruff format --check .
         
     - name: Базова перевірка імпортів
       run: |

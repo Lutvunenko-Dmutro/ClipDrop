@@ -6,10 +6,11 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 DB_FILE = "bot_data.db"
 
+
 def init_db():
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS user_states (
                 user_id INTEGER PRIMARY KEY,
                 query TEXT,
@@ -17,38 +18,43 @@ def init_db():
                 page INTEGER,
                 cart TEXT
             )
-        ''')
+        """)
         conn.commit()
+
 
 def get_state(user_id: int) -> Dict[str, Any]:
     logger.info(f"[db.get_state] Запит стану для user_id={user_id}")
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT query, videos, page, cart FROM user_states WHERE user_id = ?", (user_id,))
+        cursor.execute(
+            "SELECT query, videos, page, cart FROM user_states WHERE user_id = ?",
+            (user_id,),
+        )
         row = cursor.fetchone()
         if row:
             state = {
                 "query": row[0],
                 "videos": json.loads(row[1]),
                 "page": row[2],
-                "cart": json.loads(row[3])
+                "cart": json.loads(row[3]),
             }
-            logger.info(f"[db.get_state] Знайдено стан: page={state['page']}, videos={len(state['videos'])}, cart={len(state['cart'])}")
+            logger.info(
+                f"[db.get_state] Знайдено стан: page={state['page']}, videos={len(state['videos'])}, cart={len(state['cart'])}"
+            )
             return state
         else:
-            logger.info(f"[db.get_state] Стан не знайдено, повертаю порожній")
-            return {
-                "query": "",
-                "videos": [],
-                "page": 0,
-                "cart": []
-            }
+            logger.info("[db.get_state] Стан не знайдено, повертаю порожній")
+            return {"query": "", "videos": [], "page": 0, "cart": []}
+
 
 def save_state(user_id: int, state: Dict[str, Any]):
-    logger.info(f"[db.save_state] Збереження стану для user_id={user_id}, page={state.get('page')}, videos={len(state.get('videos', []))}")
+    logger.info(
+        f"[db.save_state] Збереження стану для user_id={user_id}, page={state.get('page')}, videos={len(state.get('videos', []))}"
+    )
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(
+            """
             INSERT INTO user_states (user_id, query, videos, page, cart)
             VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
@@ -56,11 +62,13 @@ def save_state(user_id: int, state: Dict[str, Any]):
                 videos=excluded.videos,
                 page=excluded.page,
                 cart=excluded.cart
-        ''', (
-            user_id,
-            state["query"],
-            json.dumps(state["videos"]),
-            state["page"],
-            json.dumps(state["cart"])
-        ))
+        """,
+            (
+                user_id,
+                state["query"],
+                json.dumps(state["videos"]),
+                state["page"],
+                json.dumps(state["cart"]),
+            ),
+        )
         conn.commit()

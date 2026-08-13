@@ -9,12 +9,15 @@ from core.gofile_client import upload_file_to_gofile
 
 logger = logging.getLogger(__name__)
 
-async def download_single_video(session: aiohttp.ClientSession, url: str, filepath: str):
+
+async def download_single_video(
+    session: aiohttp.ClientSession, url: str, filepath: str
+):
     """Скачує одне відео і зберігає за вказаним шляхом."""
     try:
         async with session.get(url) as response:
             if response.status == 200:
-                with open(filepath, 'wb') as f:
+                with open(filepath, "wb") as f:
                     while True:
                         chunk = await response.content.read(1024 * 1024)
                         if not chunk:
@@ -26,7 +29,10 @@ async def download_single_video(session: aiohttp.ClientSession, url: str, filepa
         logger.error(f"Помилка завантаження відео {url}: {e}")
         return False
 
-async def create_bulk_pack(video_urls: List[str], user_id: int) -> Tuple[Optional[str], bool]:
+
+async def create_bulk_pack(
+    video_urls: List[str], user_id: int
+) -> Tuple[Optional[str], bool]:
     """
     Скачує відео за списком URL, пакує в ZIP.
     Повертає Tuple (path_or_link, is_link).
@@ -42,9 +48,9 @@ async def create_bulk_pack(video_urls: List[str], user_id: int) -> Tuple[Optiona
     tasks = []
     async with aiohttp.ClientSession() as session:
         for idx, video_url in enumerate(video_urls):
-            filepath = os.path.join(pack_dir, f"footage_{idx+1}.mp4")
+            filepath = os.path.join(pack_dir, f"footage_{idx + 1}.mp4")
             tasks.append(download_single_video(session, video_url, filepath))
-        
+
         if not tasks:
             shutil.rmtree(pack_dir, ignore_errors=True)
             return None, False
@@ -54,7 +60,7 @@ async def create_bulk_pack(video_urls: List[str], user_id: int) -> Tuple[Optiona
 
     # Архівація
     zip_path = f"{pack_dir}.zip"
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(pack_dir):
             for file in files:
                 zipf.write(os.path.join(root, file), arcname=file)
