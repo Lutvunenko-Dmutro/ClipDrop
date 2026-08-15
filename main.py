@@ -38,6 +38,7 @@ async def health_check(request):
 # ============================================================
 async def on_startup(bot: Bot):
     if not WEBHOOK_URL:
+        await bot.delete_webhook(drop_pending_updates=True)
         return
     webhook_full_url = f"{WEBHOOK_URL}{WEBHOOK_PATH}"
     await bot.set_webhook(
@@ -63,9 +64,6 @@ def main():
 
     if not WEBHOOK_URL:
         logger.info("🚀 Запуск ClipDrop у режимі Polling (Локальне тестування)...")
-        # Видаляємо вебхук перед поллінгом
-        import asyncio
-        asyncio.run(bot.delete_webhook(drop_pending_updates=True))
         dp.run_polling(bot, allowed_updates=["message", "inline_query", "callback_query"])
     else:
         app = web.Application()
