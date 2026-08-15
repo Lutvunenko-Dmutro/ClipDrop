@@ -44,12 +44,20 @@ async def translate_query(query: str, target_lang: str) -> str:
 
 async def fetch_myinstants(session, url: str):
     """Fetches HTML and parses sounds using regex."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+    }
     try:
-        async with session.get(url, timeout=5) as response:
+        async with session.get(url, headers=headers, timeout=5) as response:
             if response.status == 200:
                 html = await response.text()
                 pattern = r"onclick=\"play\('([^']+)'[^)]*\)\".*?class=\"[^\"]*instant-link[^\"]*\"[^>]*>([^<]+)</a>"
                 return re.findall(pattern, html, re.DOTALL)
+            else:
+                logger.warning(f"MyInstants повернув статус {response.status} для {url}")
+
     except Exception as e:
         logger.error(f"Помилка парсингу {url}: {e}")
     return []
