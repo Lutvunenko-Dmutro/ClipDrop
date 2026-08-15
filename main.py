@@ -58,6 +58,12 @@ def main():
 
     bot = Bot(token=TOKEN)
     dp  = Dispatcher()
+
+    @dp.update()
+    async def log_all_updates(update, handler):
+        logger.info(f"RAW UPDATE RECEIVED: {update.model_dump_json()}")
+        return await handler(update)
+
     dp.include_router(router)
     dp.include_router(inline_router)
     dp.startup.register(on_startup)
