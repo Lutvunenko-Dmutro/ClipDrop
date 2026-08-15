@@ -6,6 +6,7 @@ from aiogram import Router, F
 from aiogram.types import InlineQuery, InlineQueryResultAudio
 from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
 from aiogram.exceptions import TelegramBadRequest
+from deep_translator import GoogleTranslator
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -24,7 +25,6 @@ CYRILLIC_TO_LATIN = {
 }
 
 def normalize_ukrainian(text: str) -> str:
-    # Заміна специфічних українських літер на російські аналоги для MyInstants
     replacements = {'і': 'и', 'І': 'И', 'ї': 'ий', 'Ї': 'Ий', 'є': 'е', 'Є': 'Е'}
     for ua, ru in replacements.items():
         text = text.replace(ua, ru)
@@ -32,6 +32,15 @@ def normalize_ukrainian(text: str) -> str:
 
 def transliterate_to_latin(text: str) -> str:
     return "".join(CYRILLIC_TO_LATIN.get(c, c) for c in text)
+
+async def translate_query(query: str, target_lang: str) -> str:
+    try:
+        def do_translate():
+            return GoogleTranslator(source='auto', target=target_lang).translate(query)
+        return await asyncio.to_thread(do_translate)
+    except Exception as e:
+        logger.error(f"Помилка перекладу '{query}' на {target_lang}: {e}")
+        return ""
 
 async def fetch_myinstants(session, url: str):
     """Fetches HTML and parses sounds using regex."""
@@ -54,7 +63,7 @@ async def search_myinstants(inline_query: InlineQuery):
     try:
         async with aiohttp.ClientSession() as session:
             if not query:
-                # Тренди локальні (без запиту)
+                # Тренди локальні
                 matches = await fetch_myinstants(session, f"{MYINSTANTS_BASE_URL}/ru/index/ru/")
                 for idx, (audio_path, title) in enumerate(matches[:50]):
                     results.append(
@@ -65,30 +74,46 @@ async def search_myinstants(inline_query: InlineQuery):
                         )
                     )
             else:
-                # Формуємо список URL для паралельного пошуку
-                urls_to_fetch = []
-                
-                # 1. Оригінальний запит на RU версії
-                urls_to_fetch.append(f"{MYINSTANTS_BASE_URL}/ru/search/?name={query}")
-                
-                # 2. Нормалізований запит (укр -> рос літери)
+                # 1. Базові адаптації
                 norm_query = normalize_ukrainian(query)
-                if norm_query != query:
-                    urls_to_fetch.append(f"{MYINSTANTS_BASE_URL}/ru/search/?name={norm_query}")
-                
-                # 3. Транслітерація (кирилиця -> латиниця) на глобальній версії
                 trans_query = transliterate_to_latin(query)
-                if trans_query != query:
-                    urls_to_fetch.append(f"{MYINSTANTS_BASE_URL}/search/?name={trans_query}")
-                elif not re.search(r'[а-яА-ЯёЁїЇіІєЄ]', query):
-                    # Якщо запит вже англійською, шукаємо його і на глобальній версії!
-                    urls_to_fetch.append(f"{MYINSTANTS_BASE_URL}/search/?name={query}")
                 
-                # Робимо всі запити одночасно
+                # 2. ШІ-переклад (виконується паралельно)
+                ru_query, en_query = await asyncio.gather(
+                    translate_query(query, 'ru'),
+                    translate_query(query, 'en')
+                )
+                
+                # 3. Збираємо всі можливі варіанти пошуку
+                search_terms = {query, norm_query, trans_query, ru_query, en_query}
+                
+                # 4. Fuzzy Fallback: розбиття на окремі слова, якщо фраза довга
+                def add_words(text: str):
+                    if text and len(text.split()) > 1:
+                        for w in text.split():
+                            if len(w) > 2: # Ігноруємо короткі прийменники
+                                search_terms.add(w)
+                
+                add_words(query)
+                add_words(ru_query)
+                add_words(en_query)
+                
+                # 5. Генеруємо URL для кожного терміну
+                urls_to_fetch = set()
+                for term in search_terms:
+                    if not term:
+                        continue
+                    # Якщо є кирилиця — шукаємо в локальній базі, інакше в глобальній
+                    if re.search(r'[а-яА-ЯёЁїЇіІєЄ]', term):
+                        urls_to_fetch.add(f"{MYINSTANTS_BASE_URL}/ru/search/?name={term}")
+                    else:
+                        urls_to_fetch.add(f"{MYINSTANTS_BASE_URL}/search/?name={term}")
+                
+                # 6. Робимо всі запити одночасно
                 tasks = [fetch_myinstants(session, url) for url in urls_to_fetch]
                 responses = await asyncio.gather(*tasks)
                 
-                # Збираємо всі результати в один список, уникаючи дублікатів
+                # 7. Об'єднання та видалення дублікатів
                 seen_urls = set()
                 all_matches = []
                 for response_matches in responses:
@@ -102,9 +127,9 @@ async def search_myinstants(inline_query: InlineQuery):
                         InlineQueryResultArticle(
                             id="not_found",
                             title=f"❌ За запитом '{query}' нічого не знайдено",
-                            description="На сайті MyInstants такого звуку немає.",
+                            description="Я намагався перекласти та шукати окремі слова, але таких звуків немає.",
                             input_message_content=InputTextMessageContent(
-                                message_text=f"Я шукав звук '{query}', але на MyInstants його не існує 😢"
+                                message_text=f"Я шукав звук '{query}' (і його переклади), але на MyInstants нічого схожого не існує 😢"
                             )
                         )
                     )
@@ -118,7 +143,7 @@ async def search_myinstants(inline_query: InlineQuery):
                             )
                         )
     except Exception as e:
-        logger.error(f"Помилка обробки інлайн запиту: {e}")
+        logger.error(f"Помилка обробки інлайн запиту: {e}", exc_info=True)
 
     try:
         await inline_query.answer(results, cache_time=5)
