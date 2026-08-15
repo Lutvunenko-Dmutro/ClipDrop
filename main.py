@@ -78,7 +78,10 @@ async def start_polling_and_web(
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
     logger.info(f"✅ Локальний веб-сервер запущено на http://localhost:{port}")
-    await dp.start_polling(bot)
+    await dp.start_polling(
+        bot,
+        allowed_updates=["message", "callback_query", "inline_query", "web_app_data"]
+    )
 
 
 # ============================================================

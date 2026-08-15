@@ -280,7 +280,7 @@ async def message_handler_search(message: Message):
         if message.chat.type == "private" and not message.web_app_data:
             query = url
             status_msg = await message.reply(
-                f"🔍 Шукаю футажі для: **{query}**...", parse_mode="Markdown"
+                f"🔍 Шукаю футажі для: <b>{query}</b>...", parse_mode="HTML"
             )
 
             videos = await search_videos(query, per_page=80)
