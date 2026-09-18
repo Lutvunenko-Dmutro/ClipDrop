@@ -40,7 +40,6 @@ async def get_tiktok_photos(url: str) -> list[str]:
     """Використовує RapidAPI для обходу блокувань Cloudflare на Render."""
     logger.info(f"Завантажуємо TikTok фото через RapidAPI: {url}")
     
-    import os
     rapidapi_key = os.getenv("RAPIDAPI_KEY")
     if not rapidapi_key:
         logger.error("RAPIDAPI_KEY не знайдено в .env!")

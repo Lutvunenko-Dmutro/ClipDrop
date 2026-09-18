@@ -1,12 +1,14 @@
+import os
 import logging
 import aiohttp
 import asyncio
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import CommandStart, Command
-from aiogram.types import FSInputFile
+from aiogram.types import FSInputFile, URLInputFile
+from aiogram.utils.media_group import MediaGroupBuilder
 
-from core.downloader import download_tiktok_video, download_youtube_rapidapi, cleanup_file
+from core.downloader import download_tiktok_video, download_youtube_rapidapi, cleanup_file, get_tiktok_photos
 from core.limiter import check_limits, record_request
 
 router = Router()
@@ -65,10 +67,6 @@ async def process_video_task(message: Message, url: str, is_tiktok: bool, is_you
                 url = await resolve_tiktok_redirect(url)
                 
             if "/photo/" in url.lower() or "aweme_type=150" in url.lower():
-                from core.downloader import get_tiktok_photos
-                from aiogram.types import URLInputFile
-                from aiogram.utils.media_group import MediaGroupBuilder
-                
                 await wait_msg.edit_text("⏳ Це фото-пост, завантажую фотографії...")
                 photos = await get_tiktok_photos(url)
                 
@@ -99,7 +97,6 @@ async def process_video_task(message: Message, url: str, is_tiktok: bool, is_you
                 await wait_msg.edit_text("⏳ Відео завелике, стискаю його щоб відправити в Telegram (це може зайняти хвилину)...")
                 
             # Перевіряємо фінальний розмір
-            import os
             final_size = os.path.getsize(video_path) / (1024 * 1024)
             if final_size > 50:
                 await wait_msg.edit_text(f"❌ Навіть після стиснення файл занадто великий ({final_size:.2f} МБ). Максимум 50 МБ.")
