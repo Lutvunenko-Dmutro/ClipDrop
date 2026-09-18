@@ -40,13 +40,32 @@ async def get_tiktok_photos(url: str) -> list[str]:
     """Використовує tikwm.com API для отримання посилань на фотографії з TikTok."""
     logger.info(f"Завантажуємо TikTok фото: {url}")
     api_url = f"https://www.tikwm.com/api/?url={url}"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Origin': 'https://www.tikwm.com',
+        'Referer': 'https://www.tikwm.com/',
+        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"'
+    }
     
     async with aiohttp.ClientSession() as session:
-        async with session.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                if "data" in data and "images" in data["data"]:
-                    return data["data"]["images"]
+        try:
+            async with session.get(api_url, headers=headers) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if "data" in data and "images" in data["data"]:
+                        return data["data"]["images"]
+                    else:
+                        logger.error(f"tikwm API не повернув images: {data}")
+                else:
+                    text = await resp.text()
+                    logger.error(f"tikwm API повернув помилку {resp.status}: {text}")
+        except Exception as e:
+            logger.error(f"Помилка при запиті до tikwm API: {e}")
+            
     return []
 
 async def download_youtube_rapidapi(url: str, message: types.Message) -> tuple[str, bool]:
