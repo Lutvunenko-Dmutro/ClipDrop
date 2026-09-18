@@ -37,34 +37,40 @@ async def download_tiktok_video(url: str) -> str:
     return await loop.run_in_executor(None, _download)
 
 async def get_tiktok_photos(url: str) -> list[str]:
-    """Використовує tikwm.com API для отримання посилань на фотографії з TikTok."""
-    logger.info(f"Завантажуємо TikTok фото: {url}")
-    api_url = "https://www.tikwm.com/api/"
-    headers = {
-        'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Origin': 'https://www.tikwm.com',
-        'Referer': 'https://www.tikwm.com/',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"'
-    }
+    """Використовує RapidAPI для обходу блокувань Cloudflare на Render."""
+    logger.info(f"Завантажуємо TikTok фото через RapidAPI: {url}")
     
+    import os
+    rapidapi_key = os.getenv("RAPIDAPI_KEY")
+    if not rapidapi_key:
+        logger.error("RAPIDAPI_KEY не знайдено в .env!")
+        return []
+
+    # API: tiktok-video-no-watermark2 на RapidAPI
+    api_url = "https://tiktok-video-no-watermark2.p.rapidapi.com/"
+    querystring = {"url": url, "hd": "1"}
+    headers = {
+        "x-rapidapi-key": rapidapi_key,
+        "x-rapidapi-host": "tiktok-video-no-watermark2.p.rapidapi.com"
+    }
+
     async with aiohttp.ClientSession() as session:
         try:
-            # Використовуємо POST запит замість GET, щоб обійти блокування Cloudflare на Render
-            async with session.post(api_url, headers=headers, data={"url": url}) as resp:
+            async with session.get(api_url, headers=headers, params=querystring) as resp:
                 if resp.status == 200:
                     data = await resp.json()
+                    # Перевіряємо чи є фотографії (images) у відповіді
                     if "data" in data and "images" in data["data"]:
                         return data["data"]["images"]
+                    elif "data" in data and "play" in data["data"]:
+                        logger.error("Це відео, а не фото!")
                     else:
-                        logger.error(f"tikwm API не повернув images: {data}")
+                        logger.error(f"RapidAPI не повернув фото: {data}")
                 else:
                     text = await resp.text()
-                    logger.error(f"tikwm API повернув помилку {resp.status}: {text}")
+                    logger.error(f"RapidAPI помилка {resp.status}: {text}")
         except Exception as e:
-            logger.error(f"Помилка при запиті до tikwm API: {e}")
+            logger.error(f"Помилка RapidAPI: {e}")
             
     return []
 
