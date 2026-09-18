@@ -61,7 +61,7 @@ async def process_video_task(message: Message, url: str, is_tiktok: bool, is_you
 
     try:
         if is_tiktok:
-            if "vm.tiktok.com" in url.lower():
+            if "vm.tiktok.com" in url.lower() or "vt.tiktok.com" in url.lower():
                 url = await resolve_tiktok_redirect(url)
                 
             if "/photo/" in url.lower() or "aweme_type=150" in url.lower():
