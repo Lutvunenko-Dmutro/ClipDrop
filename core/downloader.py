@@ -39,7 +39,7 @@ async def download_tiktok_video(url: str) -> str:
 async def get_tiktok_photos(url: str) -> list[str]:
     """Використовує tikwm.com API для отримання посилань на фотографії з TikTok."""
     logger.info(f"Завантажуємо TikTok фото: {url}")
-    api_url = f"https://www.tikwm.com/api/?url={url}"
+    api_url = "https://www.tikwm.com/api/"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/javascript, */*; q=0.01',
@@ -53,7 +53,8 @@ async def get_tiktok_photos(url: str) -> list[str]:
     
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.get(api_url, headers=headers) as resp:
+            # Використовуємо POST запит замість GET, щоб обійти блокування Cloudflare на Render
+            async with session.post(api_url, headers=headers, data={"url": url}) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     if "data" in data and "images" in data["data"]:
