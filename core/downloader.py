@@ -36,6 +36,19 @@ async def download_tiktok_video(url: str) -> str:
             
     return await loop.run_in_executor(None, _download)
 
+async def get_tiktok_photos(url: str) -> list[str]:
+    """Використовує tikwm.com API для отримання посилань на фотографії з TikTok."""
+    logger.info(f"Завантажуємо TikTok фото: {url}")
+    api_url = f"https://www.tikwm.com/api/?url={url}"
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.get(api_url, headers={'User-Agent': 'Mozilla/5.0'}) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                if "data" in data and "images" in data["data"]:
+                    return data["data"]["images"]
+    return []
+
 async def download_youtube_rapidapi(url: str, message: types.Message) -> tuple[str, bool]:
     """
     Завантажує YouTube відео через RapidAPI з відображенням прогресу.

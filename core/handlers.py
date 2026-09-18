@@ -65,7 +65,26 @@ async def process_video_task(message: Message, url: str, is_tiktok: bool, is_you
                 url = await resolve_tiktok_redirect(url)
                 
             if "/photo/" in url.lower() or "aweme_type=150" in url.lower():
-                await wait_msg.edit_text("❌ Це фото-пост, а бот підтримує лише відео.")
+                from core.downloader import get_tiktok_photos
+                from aiogram.types import URLInputFile
+                from aiogram.utils.media_group import MediaGroupBuilder
+                
+                await wait_msg.edit_text("⏳ Це фото-пост, завантажую фотографії...")
+                photos = await get_tiktok_photos(url)
+                
+                if not photos:
+                    await wait_msg.edit_text("❌ Не вдалося отримати фотографії. Можливо, посилання недійсне або акаунт приватний.")
+                    return
+                
+                for i in range(0, len(photos), 10):
+                    batch = photos[i:i+10]
+                    media_group = MediaGroupBuilder()
+                    for photo_url in batch:
+                        media_group.add_photo(media=URLInputFile(photo_url))
+                    await message.reply_media_group(media=media_group.build())
+                
+                await wait_msg.delete()
+                record_request(user_id)
                 return
 
             video_path = await download_tiktok_video(url)
