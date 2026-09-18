@@ -41,12 +41,11 @@ async def get_tiktok_photos(url: str) -> list[str]:
     logger.info(f"Завантажуємо TikTok фото: {url}")
     api_url = "https://www.tikwm.com/api/"
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
         'Accept': 'application/json, text/javascript, */*; q=0.01',
         'Accept-Language': 'en-US,en;q=0.9',
         'Origin': 'https://www.tikwm.com',
         'Referer': 'https://www.tikwm.com/',
-        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
         'Sec-Ch-Ua-Mobile': '?0',
         'Sec-Ch-Ua-Platform': '"Windows"'
     }
